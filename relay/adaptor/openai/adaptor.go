@@ -1,15 +1,21 @@
 package openai
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/eloxt/llmhub/common/client"
+	"github.com/eloxt/llmhub/common/logger"
+	"github.com/eloxt/llmhub/model"
 	"github.com/eloxt/llmhub/relay/adaptor"
 	"github.com/eloxt/llmhub/relay/channeltype"
 	"github.com/eloxt/llmhub/relay/meta"
-	"github.com/eloxt/llmhub/relay/model"
+	relayModel "github.com/eloxt/llmhub/relay/model"
 	"github.com/eloxt/llmhub/relay/relaymode"
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
+	"strconv"
 )
 
 type Adaptor struct {
@@ -71,14 +77,14 @@ func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Request, meta *me
 	return nil
 }
 
-func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *model.GeneralOpenAIRequest) (any, error) {
+func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *relayModel.GeneralOpenAIRequest) (any, error) {
 	if request == nil {
 		return nil, errors.New("request is nil")
 	}
 	if request.Stream {
 		// always return usage in stream mode
 		if request.StreamOptions == nil {
-			request.StreamOptions = &model.StreamOptions{}
+			request.StreamOptions = &relayModel.StreamOptions{}
 		}
 		request.StreamOptions.IncludeUsage = true
 	}
@@ -96,7 +102,7 @@ func (a *Adaptor) DoRequest(c *gin.Context, meta *meta.Meta, requestBody io.Read
 	return adaptor.DoRequestHelper(a, c, meta, requestBody)
 }
 
-func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Meta) (usage *model.Usage, err *model.ErrorWithStatusCode) {
+func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Meta) (usage *relayModel.Usage, err *relayModel.ErrorWithStatusCode) {
 	if meta.IsStream {
 		var responseText string
 		err, responseText, usage = StreamHandler(c, resp, meta.Mode)
@@ -118,12 +124,72 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Met
 	return
 }
 
-func (a *Adaptor) GetModelList() []string {
-	_, modelList := GetCompatibleChannelMeta(a.ChannelType)
-	return modelList
+func (a *Adaptor) FetchModelList(key string) ([]*model.Model, error) {
+	baseURL := channeltype.ChannelBaseURLs[a.ChannelType]
+	requestURL := fmt.Sprintf("%s/v1/models", baseURL)
+	req, err := http.NewRequest(http.MethodGet, requestURL, nil)
+	if err != nil {
+		logger.Warnf(nil, "fetch model list for OpenAI failed: %s", err.Error())
+		return nil, err
+	}
+	response, err := client.HTTPClient.Do(req)
+	if err != nil {
+		logger.Warnf(nil, "fetch model list for OpenAI failed: %s", err.Error())
+		return nil, err
+	}
+	if response == nil {
+		logger.Warnf(nil, "fetch model list for OpenAI failed: response is nil")
+		return nil, errors.New("response is nil")
+	}
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		logger.Warnf(nil, "fetch model list for OpenAI failed: %s", err.Error())
+		return nil, err
+	}
+	_ = response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		logger.Warnf(nil, "fetch model list for OpenAI failed: %s", response.Status)
+		return nil, errors.New("fetch model list failed")
+	}
+	var models *ModelListResponse
+	err = json.Unmarshal(body, &models)
+	if err != nil {
+		logger.Warnf(nil, "fetch model list for OpenAI failed: %s", err.Error())
+		return nil, err
+	}
+	var modelList []*model.Model
+	id := 1
+	for _, m := range models.Data {
+		prompt, _ := strconv.ParseFloat(m.Pricing.Prompt, 64)
+		completion, _ := strconv.ParseFloat(m.Pricing.Completion, 64)
+		inputCacheRead, _ := strconv.ParseFloat(m.Pricing.InputCacheRead, 64)
+		inputCacheWrite, _ := strconv.ParseFloat(m.Pricing.InputCacheWrite, 64)
+		internalReasoning, _ := strconv.ParseFloat(m.Pricing.InternalReasoning, 64)
+		webSearch, _ := strconv.ParseFloat(m.Pricing.WebSearch, 64)
+
+		config := &model.Config{
+			ContextLength:   m.ContextLength,
+			Prompt:          prompt,
+			Completion:      completion,
+			InputCacheRead:  inputCacheRead,
+			InputCacheWrite: inputCacheWrite,
+			Reasoning:       internalReasoning,
+			Additional:      webSearch,
+			Tokenizer:       m.Architecture.Tokenizer,
+		}
+		respModel := &model.Model{
+			Id:         id,
+			Name:       m.ID,
+			MappedName: m.ID,
+			Enabled:    true,
+			Config:     config,
+		}
+		id += 1
+		modelList = append(modelList, respModel)
+	}
+	return modelList, nil
 }
 
 func (a *Adaptor) GetChannelName() string {
-	channelName, _ := GetCompatibleChannelMeta(a.ChannelType)
-	return channelName
+	return ""
 }

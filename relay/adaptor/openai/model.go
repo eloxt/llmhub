@@ -143,3 +143,32 @@ type CompletionsStreamResponse struct {
 		FinishReason string `json:"finish_reason"`
 	} `json:"choices"`
 }
+
+type ModelListResponse struct {
+	Data []ModelList `json:"data"`
+}
+
+type ModelList struct {
+	ID            string       `json:"id"`
+	Name          string       `json:"name"`
+	Description   string       `json:"description"`
+	ContextLength int64        `json:"context_length"`
+	Architecture  Architecture `json:"architecture"`
+	Pricing       Pricing      `json:"pricing"`
+}
+
+type Architecture struct {
+	Modality  string `json:"modality"`
+	Tokenizer string `json:"tokenizer"`
+}
+
+type Pricing struct {
+	Prompt            string `json:"prompt"`
+	Completion        string `json:"completion"`
+	Image             string `json:"image"`
+	Request           string `json:"request"`
+	InputCacheRead    string `json:"input_cache_read"`
+	InputCacheWrite   string `json:"input_cache_write"`
+	WebSearch         string `json:"web_search"`
+	InternalReasoning string `json:"internal_reasoning"`
+}

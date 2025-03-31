@@ -3,38 +3,30 @@ package model
 import (
 	"context"
 	"github.com/eloxt/llmhub/common"
-	"github.com/eloxt/llmhub/common/utils"
-	"sort"
-	"strings"
-
+	"github.com/eloxt/llmhub/common/logger"
 	"gorm.io/gorm"
+	"sort"
 )
 
 type Model struct {
-	Name      string `json:"name" gorm:"primaryKey;autoIncrement:false"`
-	ChannelId int    `json:"channel_id" gorm:"primaryKey;autoIncrement:false;index"`
-	Enabled   bool   `json:"enabled"`
-	Priority  *int64 `json:"priority" gorm:"bigint;default:0;index"`
-	Config    Config `json:"config" gorm:"serializer:json"`
+	Id         int     `json:"id" gorm:"primary_key"`
+	Name       string  `json:"name" gorm:"type:text"`
+	MappedName string  `json:"mapped_name"`
+	ChannelId  int     `json:"channel_id"`
+	Enabled    bool    `json:"enabled"`
+	Priority   *int64  `json:"priority" gorm:"bigint;default:0;index"`
+	Config     *Config `json:"config" gorm:"serializer:json"`
 }
 
 type Config struct {
-	MaxTokens                       int64   `json:"max_tokens"`
-	MaxInputTokens                  int64   `json:"max_input_tokens"`
-	MaxOutputTokens                 int64   `json:"max_output_tokens"`
-	InputCostPerToken               float64 `json:"input_cost_per_token"`
-	OutputCostPerToken              float64 `json:"output_cost_per_token"`
-	CacheReadInputTokenCost         float64 `json:"cache_read_input_token_cost"`
-	Mode                            string  `json:"mode"`
-	SupportsFunctionCalling         bool    `json:"supports_function_calling"`
-	SupportsParallelFunctionCalling bool    `json:"supports_parallel_function_calling"`
-	SupportsVision                  bool    `json:"supports_vision"`
-	SupportsAudioInput              bool    `json:"supports_audio_input"`
-	SupportsAudioOutput             bool    `json:"supports_audio_output"`
-	SupportsPromptCaching           bool    `json:"supports_prompt_caching"`
-	SupportsResponseSchema          bool    `json:"supports_response_schema"`
-	SupportsSystemMessages          bool    `json:"supports_system_messages"`
-	DeprecationDate                 string  `json:"deprecation_date"`
+	ContextLength   int64   `json:"context_length"`
+	Prompt          float64 `json:"prompt"`
+	Completion      float64 `json:"completion"`
+	InputCacheRead  float64 `json:"input_cache_read"`
+	InputCacheWrite float64 `json:"input_cache_write,omitempty"`
+	Reasoning       float64 `json:"reasoning,omitempty"`
+	Additional      float64 `json:"additional,omitempty"`
+	Tokenizer       string  `json:"tokenizer,omitempty"`
 }
 
 func GetRandomSatisfiedChannel(model string, ignoreFirstPriority bool) (*Channel, error) {
@@ -66,47 +58,39 @@ func GetRandomSatisfiedChannel(model string, ignoreFirstPriority bool) (*Channel
 	return &channel, err
 }
 
-func (channel *Channel) AddAbilities() error {
-	models_ := strings.Split(channel.Models, ",")
-	models_ = utils.DeDuplication(models_)
-	//groups_ := strings.Split(channel.Group, ",")
-	abilities := make([]Model, 0, len(models_))
-	//for _, model := range models_ {
-	//	for _, group := range groups_ {
-	//		ability := Model{
-	//			Name:      model,
-	//			ChannelId: channel.Id,
-	//			Enabled:   channel.Status == ChannelStatusEnabled,
-	//			Priority:  channel.Priority,
-	//		}
-	//		abilities = append(abilities, ability)
-	//	}
-	//}
-	return DB.Create(&abilities).Error
+func (channel *Channel) AddModels() error {
+	models := channel.Models
+	if len(models) == 0 {
+		return nil
+	}
+	for _, _model := range models {
+		_model.Enabled = channel.Status == ChannelStatusEnabled
+	}
+	return DB.Create(models).Error
 }
 
-func (channel *Channel) DeleteAbilities() error {
+func (channel *Channel) DeleteModels() error {
 	return DB.Where("channel_id = ?", channel.Id).Delete(&Model{}).Error
 }
 
-// UpdateAbilities updates abilities of this channel.
+// UpdateModels updates abilities of this channel.
 // Make sure the channel is completed before calling this function.
-func (channel *Channel) UpdateAbilities() error {
+func (channel *Channel) UpdateModels() error {
 	// A quick and dirty way to update abilities
 	// First delete all abilities of this channel
-	err := channel.DeleteAbilities()
+	err := channel.DeleteModels()
 	if err != nil {
 		return err
 	}
 	// Then add new abilities
-	err = channel.AddAbilities()
+	err = channel.AddModels()
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func UpdateAbilityStatus(channelId int, status bool) error {
+func UpdateModelStatus(channelId int, status bool) error {
 	return DB.Model(&Model{}).Where("channel_id = ?", channelId).Select("enabled").Update("enabled", status).Error
 }
 
@@ -147,6 +131,31 @@ func GetModelList() ([]*Model, error) {
 		trueVal = "true"
 	}
 	err := DB.Model(&Model{}).Where("enabled = " + trueVal).Find(&models).Error
+	if err != nil {
+		return nil, err
+	}
+	return models, err
+}
+
+func GetModelMapping(channelId int) map[string]string {
+	var models []Model
+	err := DB.Where("channel_id = ?", channelId).Find(&models).Error
+	if err != nil {
+		logger.Warnf(nil, "failed to get model mapping: %v", err)
+		return nil
+	}
+	mapping := make(map[string]string)
+	for _, m := range models {
+		if m.MappedName != "" {
+			mapping[m.Name] = m.MappedName
+		}
+	}
+	return mapping
+}
+
+func GetModelByChannel(channelId int) ([]*Model, error) {
+	var models []*Model
+	err := DB.Where("channel_id = ?", channelId).Find(&models).Error
 	if err != nil {
 		return nil, err
 	}

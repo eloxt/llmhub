@@ -7,6 +7,7 @@ import (
 	"github.com/eloxt/llmhub/common/config"
 	"github.com/eloxt/llmhub/common/helper"
 	"github.com/eloxt/llmhub/common/logger"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -19,18 +20,18 @@ const (
 )
 
 type Token struct {
-	Id             int     `json:"id"`
-	UserId         int     `json:"user_id"`
-	Key            string  `json:"key" gorm:"type:char(48);uniqueIndex"`
-	Status         int     `json:"status" gorm:"default:1"`
-	Name           string  `json:"name" gorm:"index" `
-	CreatedTime    int64   `json:"created_time" gorm:"bigint"`
-	AccessedTime   int64   `json:"accessed_time" gorm:"bigint"`
-	ExpiredTime    int64   `json:"expired_time" gorm:"bigint;default:-1"` // -1 means never expired
-	RemainQuota    float64 `json:"remain_quota" gorm:"default:0"`
-	UnlimitedQuota bool    `json:"unlimited_quota" gorm:"default:false"`
-	UsedQuota      float64 `json:"used_quota" gorm:"default:0"`
-	Models         *string `json:"models" gorm:"type:text"`
+	Id             int        `json:"id"`
+	UserId         int        `json:"user_id"`
+	Key            string     `json:"key" gorm:"type:char(48);uniqueIndex"`
+	Status         int        `json:"status" gorm:"default:1"`
+	Name           string     `json:"name" gorm:"index" `
+	CreatedTime    time.Time  `json:"created_time"`
+	AccessedTime   time.Time  `json:"accessed_time"`
+	ExpiredTime    *time.Time `json:"expired_time"` // null means never expired
+	RemainQuota    float64    `json:"remain_quota" gorm:"default:0"`
+	UnlimitedQuota bool       `json:"unlimited_quota" gorm:"default:false"`
+	UsedQuota      float64    `json:"used_quota" gorm:"default:0"`
+	Models         *string    `json:"models" gorm:"type:text"`
 }
 
 func GetAllUserTokens(userId int, startIdx int, num int, order string) ([]*Token, error) {
@@ -76,7 +77,7 @@ func ValidateUserToken(key string) (token *Token, err error) {
 	if token.Status != TokenStatusEnabled {
 		return nil, errors.New("该令牌状态不可用")
 	}
-	if token.ExpiredTime != -1 && token.ExpiredTime < helper.GetTimestamp() {
+	if token.ExpiredTime != nil && token.ExpiredTime.Before(time.Now()) {
 		if !common.RedisEnabled {
 			token.Status = TokenStatusExpired
 			err := token.SelectUpdate()

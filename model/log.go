@@ -7,28 +7,29 @@ import (
 	"github.com/eloxt/llmhub/common/config"
 	"github.com/eloxt/llmhub/common/helper"
 	"github.com/eloxt/llmhub/common/logger"
+	"time"
 
 	"gorm.io/gorm"
 )
 
 type Log struct {
-	Id                int     `json:"id"`
-	UserId            int     `json:"user_id" gorm:"index"`
-	CreatedAt         int64   `json:"created_at" gorm:"bigint;index:idx_created_at_type"`
-	Type              int     `json:"type" gorm:"index:idx_created_at_type"`
-	Content           string  `json:"content"`
-	Username          string  `json:"username" gorm:"index:index_username_model_name,priority:2;default:''"`
-	TokenName         string  `json:"token_name" gorm:"index;default:''"`
-	ModelName         string  `json:"model_name" gorm:"index;index:index_username_model_name,priority:1;default:''"`
-	Quota             float64 `json:"quota" gorm:"default:0"`
-	PromptTokens      int     `json:"prompt_tokens" gorm:"default:0"`
-	CompletionTokens  int     `json:"completion_tokens" gorm:"default:0"`
-	CachedTokens      int     `json:"cached_tokens" gorm:"default:0"`
-	ChannelId         int     `json:"channel" gorm:"index"`
-	RequestId         string  `json:"request_id" gorm:"default:''"`
-	ElapsedTime       int64   `json:"elapsed_time" gorm:"default:0"` // unit is ms
-	IsStream          bool    `json:"is_stream" gorm:"default:false"`
-	SystemPromptReset bool    `json:"system_prompt_reset" gorm:"default:false"`
+	Id                int       `json:"id"`
+	UserId            int       `json:"user_id" gorm:"index"`
+	CreatedAt         time.Time `json:"created_at" gorm:"index:idx_created_at_type"`
+	Type              int       `json:"type" gorm:"index:idx_created_at_type"`
+	Content           string    `json:"content"`
+	Username          string    `json:"username" gorm:"index:index_username_model_name,priority:2;default:''"`
+	TokenName         string    `json:"token_name" gorm:"index;default:''"`
+	ModelName         string    `json:"model_name" gorm:"index;index:index_username_model_name,priority:1;default:''"`
+	Quota             float64   `json:"quota" gorm:"default:0"`
+	PromptTokens      int       `json:"prompt_tokens" gorm:"default:0"`
+	CompletionTokens  int       `json:"completion_tokens" gorm:"default:0"`
+	CachedTokens      int       `json:"cached_tokens" gorm:"default:0"`
+	ChannelId         int       `json:"channel" gorm:"index"`
+	RequestId         string    `json:"request_id" gorm:"default:''"`
+	ElapsedTime       int64     `json:"elapsed_time" gorm:"default:0"` // unit is ms
+	IsStream          bool      `json:"is_stream" gorm:"default:false"`
+	SystemPromptReset bool      `json:"system_prompt_reset" gorm:"default:false"`
 }
 
 const (
@@ -58,7 +59,7 @@ func RecordLog(ctx context.Context, userId int, logType int, content string) {
 	log := &Log{
 		UserId:    userId,
 		Username:  GetUsernameById(userId),
-		CreatedAt: helper.GetTimestamp(),
+		CreatedAt: time.Now(),
 		Type:      logType,
 		Content:   content,
 	}
@@ -70,18 +71,18 @@ func RecordConsumeLog(ctx context.Context, log *Log) {
 		return
 	}
 	log.Username = GetUsernameById(log.UserId)
-	log.CreatedAt = helper.GetTimestamp()
+	log.CreatedAt = time.Now()
 	log.Type = LogTypeConsume
 	recordLogHelper(ctx, log)
 }
 
 func RecordTestLog(ctx context.Context, log *Log) {
-	log.CreatedAt = helper.GetTimestamp()
+	log.CreatedAt = time.Now()
 	log.Type = LogTypeTest
 	recordLogHelper(ctx, log)
 }
 
-func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, startIdx int, num int, channel int) (logs []*Log, err error) {
+func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, startIdx int, num int, channel int) (logs []*Log, total int64, err error) {
 	var tx *gorm.DB
 	if logType == LogTypeUnknown {
 		tx = LOG_DB
@@ -106,8 +107,15 @@ func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName
 	if channel != 0 {
 		tx = tx.Where("channel_id = ?", channel)
 	}
+	err = tx.Model(&Log{}).Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
 	err = tx.Order("id desc").Limit(num).Offset(startIdx).Find(&logs).Error
-	return logs, err
+	if err != nil {
+		return nil, 0, err
+	}
+	return logs, total, err
 }
 
 func GetUserLogs(userId int, logType int, startTimestamp int64, endTimestamp int64, modelName string, tokenName string, startIdx int, num int) (logs []*Log, err error) {

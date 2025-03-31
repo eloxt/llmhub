@@ -107,9 +107,9 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 		logger.Error(ctx, "usage is nil, which is unexpected")
 		return
 	}
-	promptPrice := modelConfig.InputCostPerToken
-	cachePrice := modelConfig.CacheReadInputTokenCost
-	completionPrice := modelConfig.OutputCostPerToken
+	promptPrice := modelConfig.Prompt
+	cachePrice := modelConfig.InputCacheRead
+	completionPrice := modelConfig.Completion
 	promptTokens := usage.PromptTokens
 	completionTokens := usage.CompletionTokens
 

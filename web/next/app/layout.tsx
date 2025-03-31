@@ -33,7 +33,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                         <SidebarProvider>
                             <AppSidebar />
                             <SidebarInset>
-                                <Toaster position="top-center" richColors />
+                                <Toaster position="bottom-center" richColors />
                                 {children}
                             </SidebarInset>
                         </SidebarProvider>

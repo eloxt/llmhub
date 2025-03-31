@@ -2,10 +2,10 @@ package model
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/eloxt/llmhub/common/config"
 	"github.com/eloxt/llmhub/common/helper"
 	"github.com/eloxt/llmhub/common/logger"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -18,21 +18,19 @@ const (
 )
 
 type Channel struct {
-	Id           int     `json:"id"`
-	Type         int     `json:"type" gorm:"default:0"`
-	Key          string  `json:"key" gorm:"type:text"`
-	Status       int     `json:"status" gorm:"default:1"`
-	Name         string  `json:"name" gorm:"index"`
-	CreatedTime  int64   `json:"created_time" gorm:"bigint"`
-	TestTime     int64   `json:"test_time" gorm:"bigint"`
-	ResponseTime int     `json:"response_time"` // in milliseconds
-	BaseURL      *string `json:"base_url" gorm:"column:base_url;default:''"`
-	Models       string  `json:"models"`
-	UsedQuota    float64 `json:"used_quota" gorm:"default:0"`
-	ModelMapping *string `json:"model_mapping" gorm:"type:varchar(1024);default:''"`
-	Priority     *int64  `json:"priority" gorm:"bigint;default:0"`
-	Config       string  `json:"config"`
-	SystemPrompt *string `json:"system_prompt" gorm:"type:text"`
+	Id           int       `json:"id"`
+	Type         int       `json:"type" gorm:"default:0"`
+	Key          string    `json:"key" gorm:"type:text"`
+	Status       int       `json:"status" gorm:"default:1"`
+	Name         string    `json:"name" gorm:"index"`
+	CreatedTime  time.Time `json:"created_time"`
+	TestTime     time.Time `json:"test_time"`
+	BaseURL      *string   `json:"base_url" gorm:"column:base_url;default:''"`
+	UsedQuota    float64   `json:"used_quota" gorm:"default:0"`
+	Priority     *int64    `json:"priority" gorm:"bigint;default:0"`
+	Config       string    `json:"config"`
+	SystemPrompt *string   `json:"system_prompt" gorm:"type:text"`
+	Models       []*Model  `json:"models" gorm:"-:all"`
 }
 
 type ChannelConfig struct {
@@ -84,7 +82,7 @@ func BatchInsertChannels(channels []Channel) error {
 		return err
 	}
 	for _, channel_ := range channels {
-		err = channel_.AddAbilities()
+		err = channel_.AddModels()
 		if err != nil {
 			return err
 		}
@@ -106,26 +104,13 @@ func (channel *Channel) GetBaseURL() string {
 	return *channel.BaseURL
 }
 
-func (channel *Channel) GetModelMapping() map[string]string {
-	if channel.ModelMapping == nil || *channel.ModelMapping == "" || *channel.ModelMapping == "{}" {
-		return nil
-	}
-	modelMapping := make(map[string]string)
-	err := json.Unmarshal([]byte(*channel.ModelMapping), &modelMapping)
-	if err != nil {
-		logger.SysError(fmt.Sprintf("failed to unmarshal model mapping for channel %d, error: %s", channel.Id, err.Error()))
-		return nil
-	}
-	return modelMapping
-}
-
 func (channel *Channel) Insert() error {
 	var err error
 	err = DB.Create(channel).Error
 	if err != nil {
 		return err
 	}
-	err = channel.AddAbilities()
+	err = channel.AddModels()
 	return err
 }
 
@@ -135,19 +120,8 @@ func (channel *Channel) Update() error {
 	if err != nil {
 		return err
 	}
-	DB.Model(channel).First(channel, "id = ?", channel.Id)
-	err = channel.UpdateAbilities()
+	err = channel.UpdateModels()
 	return err
-}
-
-func (channel *Channel) UpdateResponseTime(responseTime int64) {
-	err := DB.Model(channel).Select("response_time", "test_time").Updates(Channel{
-		TestTime:     helper.GetTimestamp(),
-		ResponseTime: int(responseTime),
-	}).Error
-	if err != nil {
-		logger.SysError("failed to update response time: " + err.Error())
-	}
 }
 
 func (channel *Channel) Delete() error {
@@ -156,7 +130,7 @@ func (channel *Channel) Delete() error {
 	if err != nil {
 		return err
 	}
-	err = channel.DeleteAbilities()
+	err = channel.DeleteModels()
 	return err
 }
 
@@ -172,15 +146,18 @@ func (channel *Channel) LoadConfig() (ChannelConfig, error) {
 	return cfg, nil
 }
 
-func UpdateChannelStatusById(id int, status int) {
-	err := UpdateAbilityStatus(id, status == ChannelStatusEnabled)
+func UpdateChannelStatusById(id int, status int) error {
+	err := UpdateModelStatus(id, status == ChannelStatusEnabled)
 	if err != nil {
 		logger.SysError("failed to update ability status: " + err.Error())
+		return err
 	}
 	err = DB.Model(&Channel{}).Where("id = ?", id).Update("status", status).Error
 	if err != nil {
 		logger.SysError("failed to update channel status: " + err.Error())
+		return err
 	}
+	return nil
 }
 
 func UpdateChannelUsedQuota(id int, quota float64) {

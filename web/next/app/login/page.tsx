@@ -12,6 +12,7 @@ import { useContext, useState } from "react"
 import { Toaster, toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { UserContext } from "@/context/user"
+import { fetchApi } from "@/lib/api"
 
 export default function LoginForm() {
     const [username, setUsername] = useState("")
@@ -22,26 +23,17 @@ export default function LoginForm() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         try {
-            const response = await fetch("/api/user/login", {
+            const response = await fetchApi("/api/user/login", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ username, password }),
+                body: { username, password },
+                showSuccessToast: true,
             })
-            if (!response.ok) {
-                toast.error("Network error: " + response.statusText)
-                return
+            
+            if (response.success) {
+                setUser({ type: "LOGIN", payload: response.data })
+                localStorage.setItem("user", JSON.stringify(response.data))
+                router.push("/")
             }
-            const data = await response.json()
-            if (!data.success) {
-                toast.error(data.message)
-                return
-            }
-            toast.success("Login successful")
-            setUser({ type: "LOGIN", payload: data.data })
-            localStorage.setItem("user", JSON.stringify(data.data))
-            router.push("/")
         } catch (error) {
             console.error("Login error:", error)
         }

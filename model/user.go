@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"github.com/eloxt/llmhub/common"
 	"github.com/eloxt/llmhub/common/config"
-	"github.com/eloxt/llmhub/common/helper"
 	"github.com/eloxt/llmhub/common/logger"
 	"github.com/eloxt/llmhub/common/random"
 	"strings"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -124,9 +124,9 @@ func (user *User) Insert(ctx context.Context, inviterId int) error {
 		UserId:         user.Id,
 		Name:           "default",
 		Key:            random.GenerateKey(),
-		CreatedTime:    helper.GetTimestamp(),
-		AccessedTime:   helper.GetTimestamp(),
-		ExpiredTime:    -1,
+		CreatedTime:    time.Now(),
+		AccessedTime:   time.Now(),
+		ExpiredTime:    nil,
 		RemainQuota:    -1,
 		UnlimitedQuota: true,
 	}

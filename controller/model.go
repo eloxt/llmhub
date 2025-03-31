@@ -3,6 +3,7 @@ package controller
 import (
 	"fmt"
 	"github.com/eloxt/llmhub/common/ctxkey"
+	"github.com/eloxt/llmhub/common/result"
 	"github.com/eloxt/llmhub/model"
 	relaymodel "github.com/eloxt/llmhub/relay/model"
 	"github.com/gin-gonic/gin"
@@ -69,18 +70,12 @@ func GetUserAvailableModels(c *gin.Context) {
 	id := c.GetInt(ctxkey.Id)
 	userGroup, err := model.CacheGetUserGroup(id)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		result.ReturnError(c, err)
 		return
 	}
 	models, err := model.CacheGetGroupModels(ctx, userGroup)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		result.ReturnError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{

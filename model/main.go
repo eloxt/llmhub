@@ -6,7 +6,6 @@ import (
 	"github.com/eloxt/llmhub/common"
 	"github.com/eloxt/llmhub/common/config"
 	"github.com/eloxt/llmhub/common/env"
-	"github.com/eloxt/llmhub/common/helper"
 	"github.com/eloxt/llmhub/common/logger"
 	"github.com/eloxt/llmhub/common/random"
 	"gorm.io/driver/mysql"
@@ -52,9 +51,8 @@ func CreateRootAccountIfNeed() error {
 				Key:            config.InitialRootToken,
 				Status:         TokenStatusEnabled,
 				Name:           "Initial Root Token",
-				CreatedTime:    helper.GetTimestamp(),
-				AccessedTime:   helper.GetTimestamp(),
-				ExpiredTime:    -1,
+				CreatedTime:    time.Now(),
+				AccessedTime:   time.Now(),
 				RemainQuota:    500000000000000,
 				UnlimitedQuota: true,
 			}
@@ -148,9 +146,9 @@ func migrateDB() error {
 	if err = DB.AutoMigrate(&Model{}); err != nil {
 		return err
 	}
-	//if err = DB.AutoMigrate(&Log{}); err != nil {
-	//	return err
-	//}
+	if err = DB.AutoMigrate(&Log{}); err != nil {
+		return err
+	}
 	if err = DB.AutoMigrate(&Channel{}); err != nil {
 		return err
 	}

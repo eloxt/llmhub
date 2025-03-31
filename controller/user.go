@@ -7,6 +7,7 @@ import (
 	"github.com/eloxt/llmhub/common/ctxkey"
 	"github.com/eloxt/llmhub/common/i18n"
 	"github.com/eloxt/llmhub/common/random"
+	"github.com/eloxt/llmhub/common/result"
 	"github.com/eloxt/llmhub/model"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -109,18 +110,12 @@ func Logout(c *gin.Context) {
 func GetUser(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		result.ReturnError(c, err)
 		return
 	}
 	user, err := model.GetUserById(id, false)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		result.ReturnError(c, err)
 		return
 	}
 	myRole := c.GetInt(ctxkey.Role)
@@ -143,10 +138,7 @@ func GenerateAccessToken(c *gin.Context) {
 	id := c.GetInt(ctxkey.Id)
 	user, err := model.GetUserById(id, true)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		result.ReturnError(c, err)
 		return
 	}
 	user.AccessToken = random.GetUUID()
@@ -160,10 +152,7 @@ func GenerateAccessToken(c *gin.Context) {
 	}
 
 	if err := user.Update(false); err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		result.ReturnError(c, err)
 		return
 	}
 
@@ -179,10 +168,7 @@ func GetSelf(c *gin.Context) {
 	id := c.GetInt(ctxkey.Id)
 	user, err := model.GetUserById(id, false)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		result.ReturnError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -210,10 +196,7 @@ func UpdateUser(c *gin.Context) {
 
 	originUser, err := model.GetUserById(updatedUser.Id, false)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		result.ReturnError(c, err)
 		return
 	}
 	myRole := c.GetInt(ctxkey.Role)
@@ -236,19 +219,13 @@ func UpdateUser(c *gin.Context) {
 	}
 	updatePassword := updatedUser.Password != ""
 	if err := updatedUser.Update(updatePassword); err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		result.ReturnError(c, err)
 		return
 	}
 	if originUser.Quota != updatedUser.Quota {
 		model.RecordLog(ctx, originUser.Id, model.LogTypeManage, fmt.Sprintf("管理员将用户额度从 ＄%.6f 修改为 ＄%.6f", originUser.Quota, updatedUser.Quota))
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "",
-	})
+	result.Return(c)
 	return
 }
 
@@ -256,10 +233,7 @@ func UpdateSelf(c *gin.Context) {
 	var user model.User
 	err := json.NewDecoder(c.Request.Body).Decode(&user)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": i18n.Translate(c, "invalid_parameter"),
-		})
+		result.ReturnMessage(c, i18n.Translate(c, "invalid_parameter"))
 		return
 	}
 	if user.Password == "" {
@@ -278,35 +252,23 @@ func UpdateSelf(c *gin.Context) {
 	}
 	updatePassword := user.Password != ""
 	if err := cleanUser.Update(updatePassword); err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		result.ReturnError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "",
-	})
+	result.Return(c)
 	return
 }
 
 func DeleteUser(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		result.ReturnError(c, err)
 		return
 	}
 	originUser, err := model.GetUserById(id, false)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		result.ReturnError(c, err)
 		return
 	}
 	myRole := c.GetInt("role")
@@ -341,16 +303,10 @@ func DeleteSelf(c *gin.Context) {
 
 	err := model.DeleteUserById(id)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		result.ReturnError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "",
-	})
+	result.Return(c)
 	return
 }
 
