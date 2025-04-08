@@ -31,6 +31,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
+import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
 
 interface Filters {
     token_name: string
@@ -175,13 +176,13 @@ export function DataTable() {
             </div>
 
             <div className="rounded-md border">
-                <Table>
+            <Table>
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id}>
                                 {headerGroup.headers.map((header) => {
                                     return (
-                                        <TableHead key={header.id}>
+                                        <TableHead key={header.id} className="font-semibold">
                                             {header.isPlaceholder
                                                 ? null
                                                 : flexRender(
@@ -196,12 +197,13 @@ export function DataTable() {
                     </TableHeader>
                     <TableBody>
                         {table.getRowModel().rows?.length ? (
-                            table.getRowModel().rows.map((row) => (
+                            table.getRowModel().rows.map((row, index) => (
                                 <TableRow
                                     key={row.id}
+                                    className={index % 2 === 0 ? "bg-gray-50" : ""}
                                 >
                                     {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id}>
+                                        <TableCell key={cell.id} className="h-14">
                                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                         </TableCell>
                                     ))}
@@ -217,7 +219,7 @@ export function DataTable() {
                     </TableBody>
                 </Table>
             </div>
-
+            
             <div className="flex items-center justify-end space-x-2 py-4">
                 <div className="flex-1 text-sm text-muted-foreground">
                     Total {total} row(s). Page {page + 1} of {Math.ceil(total / page_size)}
@@ -241,28 +243,125 @@ export function DataTable() {
                             <SelectItem value="100">100</SelectItem>
                         </SelectContent>
                     </Select>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                            table.previousPage();
-                            setPage(prevPage => Math.max(0, prevPage - 1));
-                        }}
-                        disabled={page === 0}
-                    >
-                        Previous
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                            table.nextPage();
-                            setPage(prevPage => prevPage + 1);
-                        }}
-                        disabled={page >= Math.ceil(total / page_size) - 1}
-                    >
-                        Next
-                    </Button>
+                    <Pagination>
+                        <PaginationContent>
+                            <PaginationItem>
+                                <PaginationPrevious 
+                                    href="#"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        page > 0 && fetchLogs(page - 1);
+                                    }}
+                                    aria-disabled={page === 0}
+                                    className={cn(
+                                        "cursor-pointer",
+                                        page === 0 && "pointer-events-none opacity-50"
+                                    )}
+                                />
+                            </PaginationItem>
+                            {(() => {
+                                const totalPages = Math.ceil(total / page_size);
+                                const currentPage = page + 1;
+                                const pages = [];
+
+                                // Always show first page
+                                pages.push(
+                                    <PaginationItem key={1}>
+                                        <PaginationLink 
+                                            href="#" 
+                                            isActive={currentPage === 1}
+                                            onClick={() => fetchLogs(0)}
+                                            className="cursor-pointer"
+                                        >
+                                            1
+                                        </PaginationLink>
+                                    </PaginationItem>
+                                );
+
+                                // Calculate range for visible pages
+                                let startPage = Math.max(2, currentPage - 1);
+                                let endPage = Math.min(totalPages - 1, currentPage + 1);
+
+                                // Adjust range to show 3 pages at start
+                                if (currentPage <= 3) {
+                                    startPage = 2;
+                                    endPage = Math.min(4, totalPages - 1);
+                                }
+
+                                // Adjust range to show 3 pages at end
+                                if (currentPage >= totalPages - 2) {
+                                    startPage = Math.max(totalPages - 3, 2);
+                                    endPage = totalPages - 1;
+                                }
+
+                                // Add ellipsis after first page if needed
+                                if (startPage > 2) {
+                                    pages.push(
+                                        <PaginationItem key="ellipsis1">
+                                            <PaginationEllipsis />
+                                        </PaginationItem>
+                                    );
+                                }
+
+                                // Add middle pages
+                                for (let i = startPage; i <= endPage; i++) {
+                                    pages.push(
+                                        <PaginationItem key={i}>
+                                            <PaginationLink 
+                                                href="#" 
+                                                isActive={currentPage === i}
+                                                onClick={() => fetchLogs(i - 1)}
+                                                className="cursor-pointer"
+                                            >
+                                                {i}
+                                            </PaginationLink>
+                                        </PaginationItem>
+                                    );
+                                }
+
+                                // Add ellipsis before last page if needed
+                                if (endPage < totalPages - 1) {
+                                    pages.push(
+                                        <PaginationItem key="ellipsis2">
+                                            <PaginationEllipsis />
+                                        </PaginationItem>
+                                    );
+                                }
+
+                                // Always show last page if there is more than one page
+                                if (totalPages > 1) {
+                                    pages.push(
+                                        <PaginationItem key={totalPages}>
+                                            <PaginationLink 
+                                                href="#" 
+                                                isActive={currentPage === totalPages}
+                                                onClick={() => fetchLogs(totalPages - 1)}
+                                                className="cursor-pointer"
+                                            >
+                                                {totalPages}
+                                            </PaginationLink>
+                                        </PaginationItem>
+                                    );
+                                }
+
+                                return pages;
+                            })()} 
+                            <PaginationItem>
+                                <PaginationNext 
+                                    href="#"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        page < Math.ceil(total / page_size) - 1 && fetchLogs(page + 1);
+                                    }}
+                                    aria-disabled={page >= Math.ceil(total / page_size) - 1}
+                                    className={cn(
+                                        "cursor-pointer",
+                                        page >= Math.ceil(total / page_size) - 1 && "pointer-events-none opacity-50"
+                                    )}
+                                />
+                            </PaginationItem>
+                        </PaginationContent>
+                    </Pagination>
                 </div>
             </div>
         </div>

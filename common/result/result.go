@@ -21,7 +21,7 @@ func Return(c *gin.Context) {
 }
 
 func ReturnError(c *gin.Context, err error) {
-	c.JSON(http.StatusOK, Base{
+	c.JSON(http.StatusBadRequest, Base{
 		Success: false,
 		Message: err.Error(),
 		Data:    nil,
@@ -29,7 +29,7 @@ func ReturnError(c *gin.Context, err error) {
 }
 
 func ReturnMessage(c *gin.Context, message string) {
-	c.JSON(http.StatusOK, Base{
+	c.JSON(http.StatusBadRequest, Base{
 		Success: false,
 		Message: message,
 		Data:    nil,

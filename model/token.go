@@ -31,7 +31,6 @@ type Token struct {
 	RemainQuota    float64    `json:"remain_quota" gorm:"default:0"`
 	UnlimitedQuota bool       `json:"unlimited_quota" gorm:"default:false"`
 	UsedQuota      float64    `json:"used_quota" gorm:"default:0"`
-	Models         *string    `json:"models" gorm:"type:text"`
 }
 
 func GetAllUserTokens(userId int, startIdx int, num int, order string) ([]*Token, error) {
@@ -143,16 +142,6 @@ func (t *Token) Delete() error {
 	var err error
 	err = DB.Delete(t).Error
 	return err
-}
-
-func (t *Token) GetModels() string {
-	if t == nil {
-		return ""
-	}
-	if t.Models == nil {
-		return ""
-	}
-	return *t.Models
 }
 
 func DeleteTokenById(id int, userId int) (err error) {

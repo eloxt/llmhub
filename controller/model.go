@@ -31,7 +31,7 @@ func ListModels(c *gin.Context) {
 	if c.GetString(ctxkey.AvailableModels) != "" {
 		availableModels = strings.Split(c.GetString(ctxkey.AvailableModels), ",")
 	} else {
-		availableModels, _ = model.GetModelNameList()
+		availableModels, _ = model.CacheGetModelList()
 	}
 	availableOpenAIModels := make([]OpenAIModels, 0)
 	for _, modelName := range availableModels {
@@ -82,6 +82,20 @@ func GetUserAvailableModels(c *gin.Context) {
 		"success": true,
 		"message": "",
 		"data":    models,
+	})
+	return
+}
+
+func HomeListModels(c *gin.Context) {
+	list, err := model.GetModelDetailList()
+	if err != nil {
+		result.ReturnError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    list,
 	})
 	return
 }

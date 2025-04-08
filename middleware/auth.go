@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"fmt"
 	"github.com/eloxt/llmhub/common/ctxkey"
+	"github.com/eloxt/llmhub/common/result"
 	"github.com/eloxt/llmhub/model"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -10,79 +10,24 @@ import (
 	"strings"
 )
 
-func authHelper(c *gin.Context, minRole int) {
-	session := sessions.Default(c)
-	username := session.Get("username")
-	role := session.Get("role")
-	id := session.Get("id")
-	//status := session.Get("status")
-	if username == nil {
-		// Check access token
-		accessToken := c.Request.Header.Get("Authorization")
-		if accessToken == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"success": false,
-				"message": "无权进行此操作，未登录且未提供 access token",
-			})
-			c.Abort()
-			return
-		}
-		user := model.ValidateAccessToken(accessToken)
-		if user != nil && user.Username != "" {
-			// Token is valid
-			username = user.Username
-			role = user.Role
-			id = user.Id
-			//status = user.Status
-		} else {
-			c.JSON(http.StatusOK, gin.H{
-				"success": false,
-				"message": "无权进行此操作，access token 无效",
-			})
-			c.Abort()
-			return
-		}
-	}
-	//if status.(int) == model.UserStatusDisabled || blacklist.IsUserBanned(id.(int)) {
-	//	c.JSON(http.StatusOK, gin.H{
-	//		"success": false,
-	//		"message": "用户已被封禁",
-	//	})
-	//	session := sessions.Default(c)
-	//	session.Clear()
-	//	_ = session.Save()
-	//	c.Abort()
-	//	return
-	//}
-	if role.(int) < minRole {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "无权进行此操作，权限不足",
-		})
-		c.Abort()
-		return
-	}
-	c.Set("username", username)
-	c.Set("role", role)
-	c.Set("id", id)
-	c.Next()
-}
-
 func UserAuth() func(c *gin.Context) {
 	return func(c *gin.Context) {
-		authHelper(c, model.RoleCommonUser)
-	}
-}
-
-func AdminAuth() func(c *gin.Context) {
-	return func(c *gin.Context) {
-		authHelper(c, model.RoleAdminUser)
-	}
-}
-
-func RootAuth() func(c *gin.Context) {
-	return func(c *gin.Context) {
-		authHelper(c, model.RoleRootUser)
+		session := sessions.Default(c)
+		username := session.Get("username")
+		role := session.Get("role")
+		id := session.Get("id")
+		if username == nil {
+			c.JSON(http.StatusUnauthorized, result.Base{
+				Success: false,
+				Message: "无权进行此操作",
+			})
+			c.Abort()
+			return
+		}
+		c.Set("username", username)
+		c.Set("role", role)
+		c.Set("id", id)
+		c.Next()
 	}
 }
 
@@ -98,38 +43,17 @@ func TokenAuth() func(c *gin.Context) {
 			abortWithMessage(c, http.StatusUnauthorized, err.Error())
 			return
 		}
-		//userEnabled, err := model.CacheIsUserEnabled(token.UserId)
-		if err != nil {
-			abortWithMessage(c, http.StatusInternalServerError, err.Error())
-			return
-		}
-		//if !userEnabled || blacklist.IsUserBanned(token.UserId) {
-		//	abortWithMessage(c, http.StatusForbidden, "用户已被封禁")
-		//	return
-		//}
 		requestModel, err := getRequestModel(c)
 		if err != nil && shouldCheckModel(c) {
 			abortWithMessage(c, http.StatusBadRequest, err.Error())
 			return
 		}
 		c.Set(ctxkey.RequestModel, requestModel)
-		if token.Models != nil && *token.Models != "" {
-			c.Set(ctxkey.AvailableModels, *token.Models)
-			if requestModel != "" && !isModelInList(requestModel, *token.Models) {
-				abortWithMessage(c, http.StatusForbidden, fmt.Sprintf("该令牌无权使用模型：%s", requestModel))
-				return
-			}
-		}
 		c.Set(ctxkey.Id, token.UserId)
 		c.Set(ctxkey.TokenId, token.Id)
 		c.Set(ctxkey.TokenName, token.Name)
 		if len(parts) > 1 {
-			if model.IsAdmin(token.UserId) {
-				c.Set(ctxkey.SpecificChannelId, parts[1])
-			} else {
-				abortWithMessage(c, http.StatusForbidden, "普通用户不支持指定渠道")
-				return
-			}
+			c.Set(ctxkey.SpecificChannelId, parts[1])
 		}
 
 		// set channel id for proxy relay

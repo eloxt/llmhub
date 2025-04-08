@@ -15,13 +15,16 @@ export function DataTable() {
     const [channelToDelete, setChannelToDelete] = useState<Channel | null>(null);
     const [currentPage, setCurrentPage] = useState(0);
     const [currentKeyword, setCurrentKeyword] = useState("");
+    const [total, setTotal] = useState(0);
+    const [pageSize] = useState(10);
 
     const fetchChannels = async (page: number, keyword: string) => {
         setCurrentPage(page);
         setCurrentKeyword(keyword);
-        const response = await fetchApi<Channel[]>(`/api/channel?p=${page}&keyword=${keyword}`);
+        const response = await fetchApi<Channel[]>(`/api/channel?p=${page}&keyword=${keyword}&page_size=${pageSize}`);
         if (response.success) {
             setData(response.data);
+            setTotal(response.total || 0);
         }
     };
 
@@ -85,6 +88,8 @@ export function DataTable() {
             setItemToDelete={setChannelToDelete}
             initialPage={currentPage}
             initialKeyword={currentKeyword}
+            total={total}
+            pageSize={pageSize}
         />
     )
 }

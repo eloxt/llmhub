@@ -13,41 +13,15 @@ func SetApiRouter(router *gin.Engine) {
 	apiRouter.Use(gzip.Gzip(gzip.DefaultCompression))
 	apiRouter.Use(middleware.GlobalAPIRateLimit())
 	{
-		//apiRouter.GET("/status", controller.GetStatus)
-		//apiRouter.GET("/models", middleware.UserAuth(), controller.DashboardListModels)
+		apiRouter.GET("/models", controller.HomeListModels)
 
 		userRoute := apiRouter.Group("/user")
 		{
 			userRoute.POST("/login", middleware.CriticalRateLimit(), controller.Login)
 			userRoute.GET("/logout", controller.Logout)
-
-			selfRoute := userRoute.Group("/")
-			selfRoute.Use(middleware.UserAuth())
-			{
-				//selfRoute.GET("/dashboard", controller.GetUserDashboard)
-				//selfRoute.GET("/self", controller.GetSelf)
-				//selfRoute.PUT("/self", controller.UpdateSelf)
-				//selfRoute.DELETE("/self", controller.DeleteSelf)
-				//selfRoute.GET("/token", controller.GenerateAccessToken)
-				//selfRoute.GET("/available_models", controller.GetUserAvailableModels)
-			}
-
-			adminRoute := userRoute.Group("/")
-			adminRoute.Use(middleware.AdminAuth())
-			{
-				//adminRoute.GET("/:id", controller.GetUser)
-				//adminRoute.PUT("/", controller.UpdateUser)
-				//adminRoute.DELETE("/:id", controller.DeleteUser)
-			}
 		}
-		//optionRoute := apiRouter.Group("/option")
-		//optionRoute.Use(middleware.RootAuth())
-		//{
-		//optionRoute.GET("/", controller.GetOptions)
-		//optionRoute.PUT("/", controller.UpdateOption)
-		//}
 		channelRoute := apiRouter.Group("/channel")
-		//channelRoute.Use(middleware.AdminAuth())
+		//channelRoute.Use(middleware.UserAuth())
 		{
 			channelRoute.GET("/", controller.GetAllChannels)
 			channelRoute.GET("", controller.GetAllChannels)
@@ -61,12 +35,11 @@ func SetApiRouter(router *gin.Engine) {
 			channelRoute.POST("", controller.AddChannel)
 			channelRoute.PUT("/", controller.UpdateChannel)
 			channelRoute.PUT("", controller.UpdateChannel)
-			//channelRoute.DELETE("/disabled", controller.DeleteDisabledChannel)
 			channelRoute.DELETE("/:id", controller.DeleteChannel)
 			channelRoute.GET("/fetch-model", controller.FetchChannelModelList)
 		}
 		tokenRoute := apiRouter.Group("/token")
-		tokenRoute.Use(middleware.UserAuth())
+		//tokenRoute.Use(middleware.UserAuth())
 		{
 			tokenRoute.GET("/", controller.GetAllTokens)
 			tokenRoute.GET("", controller.GetAllTokens)
@@ -78,12 +51,15 @@ func SetApiRouter(router *gin.Engine) {
 			tokenRoute.DELETE("/:id", controller.DeleteToken)
 		}
 		logRoute := apiRouter.Group("/log")
-		logRoute.GET("/", middleware.AdminAuth(), controller.GetAllLogs)
-		logRoute.GET("", middleware.AdminAuth(), controller.GetAllLogs)
-		logRoute.DELETE("/", middleware.AdminAuth(), controller.DeleteHistoryLogs)
-		logRoute.DELETE("", middleware.AdminAuth(), controller.DeleteHistoryLogs)
-		logRoute.GET("/search", middleware.AdminAuth(), controller.SearchAllLogs)
-		logRoute.GET("/self", middleware.UserAuth(), controller.GetUserLogs)
-		logRoute.GET("/self/search", middleware.UserAuth(), controller.SearchUserLogs)
+		//logRoute.Use(middleware.UserAuth())
+		{
+			logRoute.GET("/", controller.GetAllLogs)
+			logRoute.GET("", controller.GetAllLogs)
+			logRoute.DELETE("/", controller.DeleteHistoryLogs)
+			logRoute.DELETE("", controller.DeleteHistoryLogs)
+			logRoute.GET("/search", controller.SearchAllLogs)
+			logRoute.GET("/self", controller.GetUserLogs)
+			logRoute.GET("/self/search", controller.SearchUserLogs)
+		}
 	}
 }

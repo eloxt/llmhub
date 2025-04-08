@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { ColumnDef } from "@tanstack/react-table"
-import { Trash2, Pencil } from "lucide-react";
+import { Trash2, Pencil, Plus, Minus } from "lucide-react";
 import { Channel } from "./types";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,7 @@ export const createColumns = ({ onEdit, onDelete, handleChannelUpdate }: Columns
     },
     {
         accessorKey: "name",
-        header: "Name"
+        header: "Name",
     },
     {
         accessorKey: "type",
@@ -30,6 +30,8 @@ export const createColumns = ({ onEdit, onDelete, handleChannelUpdate }: Columns
     {
         accessorKey: "status",
         header: "Status",
+        enableResizing: true,
+        maxSize: 20,
         cell: ({ row }) => {
             return (
                 <Switch
@@ -54,17 +56,31 @@ export const createColumns = ({ onEdit, onDelete, handleChannelUpdate }: Columns
     {
         accessorKey: "priority",
         header: "Priority",
-        maxSize: 20,
         cell: ({ row }) => {
             return (
-                <Input
-                    type="number"
-                    value={row.original.priority}
-                    onChange={(e) => {
-                        const updatedChannel = { ...row.original, priority: parseInt(e.target.value) };
-                        handleChannelUpdate(updatedChannel);
-                    }}
-                />
+                <div className="flex items-center">
+                    <Button
+                        variant="ghost"
+                        className="rounded-full"
+                        onClick={() => {
+                            const updatedChannel = { ...row.original, priority: row.original.priority - 1 };
+                            handleChannelUpdate(updatedChannel);
+                        }}
+                    >
+                        <Minus className="h-4 w-4" />
+                    </Button>
+                    <span className="inline-flex items-center justify-center w-8">{row.original.priority}</span>
+                    <Button
+                        variant="ghost"
+                        className="rounded-full"
+                        onClick={() => {
+                            const updatedChannel = { ...row.original, priority: row.original.priority + 1 };
+                            handleChannelUpdate(updatedChannel);
+                        }}
+                    >
+                        <Plus className="h-4 w-4"/>
+                    </Button>
+                </div>
             )
         }
     },
@@ -81,7 +97,6 @@ export const createColumns = ({ onEdit, onDelete, handleChannelUpdate }: Columns
                         onClick={() => onEdit(channel)}
                     >
                         <Pencil className="h-4 w-4 mr-1" />
-                        Edit
                     </Button>
                     <Button
                         variant="ghost"
@@ -90,7 +105,6 @@ export const createColumns = ({ onEdit, onDelete, handleChannelUpdate }: Columns
                         onClick={onDelete ? () => onDelete(channel) : undefined}
                     >
                         <Trash2 className="h-4 w-4 mr-1" />
-                        Delete
                     </Button>
                 </div>
             )

@@ -8,6 +8,18 @@ export const createColumns = () => {
         {
             accessorKey: "created_at",
             header: "Create Time",
+            cell: ({ row }) => {
+                const createdAt = row.original.created_at;
+                return new Date(createdAt).toLocaleString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit', 
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
+            }
         },
         {
             accessorKey: "channel",

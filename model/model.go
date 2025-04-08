@@ -161,3 +161,12 @@ func GetModelByChannel(channelId int) ([]*Model, error) {
 	}
 	return models, err
 }
+
+func GetModelDetailList() ([]*Model, error) {
+	var models []*Model
+	err := DB.Find(&models).Error
+	if err != nil {
+		return nil, err
+	}
+	return models, err
+}

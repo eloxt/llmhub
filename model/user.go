@@ -8,7 +8,6 @@ import (
 	"github.com/eloxt/llmhub/common/config"
 	"github.com/eloxt/llmhub/common/logger"
 	"github.com/eloxt/llmhub/common/random"
-	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -258,18 +257,6 @@ func IsUserEnabled(userId int) (bool, error) {
 		return false, err
 	}
 	return user.Status == UserStatusEnabled, nil
-}
-
-func ValidateAccessToken(token string) (user *User) {
-	if token == "" {
-		return nil
-	}
-	token = strings.Replace(token, "Bearer ", "", 1)
-	user = &User{}
-	if DB.Where("access_token = ?", token).First(user).RowsAffected == 1 {
-		return user
-	}
-	return nil
 }
 
 func GetUserQuota(id int) (quota float64, err error) {

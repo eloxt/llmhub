@@ -3,7 +3,6 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/eloxt/llmhub/common/config"
 	"github.com/eloxt/llmhub/common/ctxkey"
 	"github.com/eloxt/llmhub/common/i18n"
 	"github.com/eloxt/llmhub/common/random"
@@ -13,50 +12,61 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 type LoginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+	Token    string `json:"token"`
 }
 
 func Login(c *gin.Context) {
-	if !config.PasswordLoginEnabled {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "管理员关闭了密码登录",
-			"success": false,
-		})
-		return
-	}
 	var loginRequest LoginRequest
 	err := json.NewDecoder(c.Request.Body).Decode(&loginRequest)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"message": i18n.Translate(c, "invalid_parameter"),
-			"success": false,
-		})
+		result.ReturnMessage(c, "invalid_parameter")
 		return
 	}
 	username := loginRequest.Username
 	password := loginRequest.Password
-	if username == "" || password == "" {
-		c.JSON(http.StatusOK, gin.H{
-			"message": i18n.Translate(c, "invalid_parameter"),
-			"success": false,
-		})
+	token := loginRequest.Token
+	if (username == "" || password == "") && token == "" {
+		result.ReturnMessage(c, "invalid_parameter")
 		return
 	}
-	user := model.User{
-		Username: username,
-		Password: password,
-	}
-	err = user.ValidateAndFill()
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"message": err.Error(),
-			"success": false,
-		})
-		return
+
+	var user model.User
+	if token != "" {
+		token = strings.TrimPrefix(token, "sk-")
+		parts := strings.Split(token, "-")
+		token = parts[0]
+		key, err := model.CacheGetTokenByKey(token)
+		if err != nil {
+			result.ReturnError(c, err)
+			return
+		}
+		if key == nil {
+			result.ReturnMessage(c, "无效的 Token")
+			return
+		}
+		user = model.User{
+			Username: key.Name,
+			Status:   model.UserStatusEnabled,
+		}
+	} else {
+		user = model.User{
+			Username: username,
+			Password: password,
+		}
+		err = user.ValidateAndFill()
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"message": err.Error(),
+				"success": false,
+			})
+			return
+		}
 	}
 	SetupLogin(&user, c)
 }
@@ -66,7 +76,6 @@ func SetupLogin(user *model.User, c *gin.Context) {
 	session := sessions.Default(c)
 	session.Set("id", user.Id)
 	session.Set("username", user.Username)
-	session.Set("role", user.Role)
 	session.Set("status", user.Status)
 	err := session.Save()
 	if err != nil {
