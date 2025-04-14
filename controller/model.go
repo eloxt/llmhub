@@ -19,7 +19,6 @@ type OpenAIModels struct {
 	OwnedBy string `json:"owned_by"`
 }
 
-var models []OpenAIModels
 var modelsMap map[string]OpenAIModels
 
 func init() {
@@ -63,27 +62,6 @@ func RetrieveModel(c *gin.Context) {
 			"error": Error,
 		})
 	}
-}
-
-func GetUserAvailableModels(c *gin.Context) {
-	ctx := c.Request.Context()
-	id := c.GetInt(ctxkey.Id)
-	userGroup, err := model.CacheGetUserGroup(id)
-	if err != nil {
-		result.ReturnError(c, err)
-		return
-	}
-	models, err := model.CacheGetGroupModels(ctx, userGroup)
-	if err != nil {
-		result.ReturnError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "",
-		"data":    models,
-	})
-	return
 }
 
 func HomeListModels(c *gin.Context) {

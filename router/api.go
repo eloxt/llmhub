@@ -57,9 +57,6 @@ func SetApiRouter(router *gin.Engine) {
 			logRoute.GET("", controller.GetAllLogs)
 			logRoute.DELETE("/", controller.DeleteHistoryLogs)
 			logRoute.DELETE("", controller.DeleteHistoryLogs)
-			logRoute.GET("/search", controller.SearchAllLogs)
-			logRoute.GET("/self", controller.GetUserLogs)
-			logRoute.GET("/self/search", controller.SearchUserLogs)
 		}
 	}
 }

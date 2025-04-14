@@ -119,22 +119,6 @@ func UpdateChannel(c *gin.Context) {
 	return
 }
 
-func UpdateChannelStatus(c *gin.Context) {
-	channel := model.Channel{}
-	err := c.ShouldBindJSON(&channel)
-	if err != nil {
-		result.ReturnError(c, err)
-		return
-	}
-	err = model.UpdateChannelStatusById(channel.Id, channel.Status)
-	if err != nil {
-		result.ReturnError(c, err)
-		return
-	}
-	result.Return(c)
-	return
-}
-
 func FetchChannelModelList(c *gin.Context) {
 	channelId := c.Query("channel_id")
 	var channelType int

@@ -35,22 +35,6 @@ func GetAllTokens(c *gin.Context) {
 	return
 }
 
-func SearchTokens(c *gin.Context) {
-	userId := c.GetInt(ctxkey.Id)
-	keyword := c.Query("keyword")
-	tokens, err := model.SearchUserTokens(userId, keyword)
-	if err != nil {
-		result.ReturnError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "",
-		"data":    tokens,
-	})
-	return
-}
-
 func GetToken(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	userId := c.GetInt(ctxkey.Id)
@@ -71,7 +55,7 @@ func GetToken(c *gin.Context) {
 	return
 }
 
-func validateToken(c *gin.Context, token model.Token) error {
+func validateToken(token model.Token) error {
 	if len(token.Name) > 30 {
 		return fmt.Errorf("令牌名称过长")
 	}
@@ -85,7 +69,7 @@ func AddToken(c *gin.Context) {
 		result.ReturnError(c, err)
 		return
 	}
-	err = validateToken(c, token)
+	err = validateToken(token)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -137,7 +121,7 @@ func UpdateToken(c *gin.Context) {
 		result.ReturnError(c, err)
 		return
 	}
-	err = validateToken(c, token)
+	err = validateToken(token)
 	if err != nil {
 		result.ReturnMessage(c, fmt.Sprintf("参数错误：%s", err.Error()))
 		return
