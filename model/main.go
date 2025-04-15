@@ -40,7 +40,6 @@ func CreateRootAccountIfNeed() error {
 			Status:      UserStatusEnabled,
 			DisplayName: "Root User",
 			AccessToken: accessToken,
-			Quota:       500000000000000,
 		}
 		DB.Create(&rootUser)
 		if config.InitialRootToken != "" {
@@ -53,7 +52,7 @@ func CreateRootAccountIfNeed() error {
 				Name:           "Initial Root Token",
 				CreatedTime:    time.Now(),
 				AccessedTime:   time.Now(),
-				RemainQuota:    500000000000000,
+				RemainQuota:    1,
 				UnlimitedQuota: true,
 			}
 			DB.Create(&token)

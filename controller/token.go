@@ -16,22 +16,22 @@ import (
 func GetAllTokens(c *gin.Context) {
 	userId := c.GetInt(ctxkey.Id)
 	p, _ := strconv.Atoi(c.Query("p"))
+	pageSize, _ := strconv.Atoi(c.Query("page_size"))
 	if p < 0 {
 		p = 0
 	}
-
-	order := c.Query("order")
-	tokens, err := model.GetAllUserTokens(userId, p*config.ItemsPerPage, config.ItemsPerPage, order)
+	if pageSize == 0 {
+		pageSize = 10
+	}
+	keyword := c.Query("keyword")
+	tokens, total, err := model.GetAllUserTokens(userId, p*config.ItemsPerPage, config.ItemsPerPage, keyword)
 
 	if err != nil {
 		result.ReturnError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "",
-		"data":    tokens,
-	})
+
+	result.ReturnPage(c, p, total, tokens)
 	return
 }
 

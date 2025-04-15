@@ -11,7 +11,6 @@ import (
 	"github.com/eloxt/llmhub/relay/adaptor/openai"
 	"github.com/eloxt/llmhub/relay/apitype"
 	"github.com/eloxt/llmhub/relay/billing"
-	"github.com/eloxt/llmhub/relay/channeltype"
 	"github.com/eloxt/llmhub/relay/meta"
 	"github.com/eloxt/llmhub/relay/model"
 	"io"
@@ -44,11 +43,6 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	// pre-consume quota
 	promptTokens := getPromptTokens(textRequest, contextMeta.Mode)
 	contextMeta.PromptTokens = promptTokens
-	preConsumedQuota, bizErr := preConsumeQuota(ctx, textRequest, promptTokens, modelConfig.Prompt, contextMeta)
-	if bizErr != nil {
-		logger.Warnf(ctx, "preConsumeQuota failed: %+v", *bizErr)
-		return bizErr
-	}
 
 	adaptorInstance := relay.GetAdaptor(contextMeta.APIType)
 	if adaptorInstance == nil {
@@ -69,7 +63,6 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 		return openai.ErrorWrapper(c, err, "do_request_failed", http.StatusInternalServerError)
 	}
 	if isErrorHappened(contextMeta, resp) {
-		returnPreConsumedQuota(ctx, preConsumedQuota, contextMeta.TokenId)
 		return RelayErrorHandler(resp)
 	}
 
@@ -77,11 +70,10 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	usage, respErr := adaptorInstance.DoResponse(c, resp, contextMeta)
 	if respErr != nil {
 		logger.Errorf(ctx, "respErr is not nil: %+v", respErr)
-		returnPreConsumedQuota(ctx, preConsumedQuota, contextMeta.TokenId)
 		return respErr
 	}
 	// post-consume quota
-	go postConsumeQuota(ctx, usage, contextMeta, textRequest, preConsumedQuota, modelConfig, systemPromptReset)
+	go postConsumeQuota(ctx, usage, contextMeta, textRequest, modelConfig, systemPromptReset)
 	return nil
 }
 
@@ -89,7 +81,6 @@ func getRequestBody(c *gin.Context, meta *meta.Meta, textRequest *model.GeneralO
 	if !config.EnforceIncludeUsage &&
 		meta.APIType == apitype.OpenAI &&
 		meta.OriginModelName == meta.ActualModelName &&
-		meta.ChannelType != channeltype.Baichuan &&
 		meta.ForcedSystemPrompt == "" {
 		// no need to convert request for openai
 		return c.Request.Body, nil

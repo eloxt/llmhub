@@ -2,6 +2,7 @@
 
 import { ColumnDef } from "@tanstack/react-table"
 import { Log } from "./types"
+import { Badge } from "@/components/ui/badge"
 
 export const createColumns = () => {
     const columns: ColumnDef<Log>[] = [
@@ -26,12 +27,13 @@ export const createColumns = () => {
             header: "Channel",
         },
         {
-            accessorKey: "type",
-            header: "Type",
-        },
-        {
             accessorKey: "model_name",
             header: "Model",
+            cell: ({ row }) => {
+                return (
+                    <Badge>{row.original.model_name}</Badge>
+                )
+            }
         },
         {
             accessorKey: "token_name",
@@ -48,6 +50,10 @@ export const createColumns = () => {
         {
             accessorKey: "quota",
             header: "Quota",
+            cell: ({ row }) => {
+                const quota = row.original.quota;
+                return quota ? "$" + quota.toFixed(7) : "$0.00";
+            }
         },
         {
             accessorKey: "content",

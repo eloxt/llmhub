@@ -38,8 +38,7 @@ export const createColumns = ({ onEdit, onDelete, handleTokenUpdate }: ColumnsPr
         cell: ({ row }) => {
             const accessedTime = row.original.accessed_time;
             if (!accessedTime) return "N/A";
-            const date = new Date(accessedTime * 1000); // Convert Unix timestamp to milliseconds
-            return date.toLocaleString('zh-CN', {
+            return new Date(accessedTime).toLocaleString('zh-CN', {
                 year: 'numeric',
                 month: '2-digit', 
                 day: '2-digit',

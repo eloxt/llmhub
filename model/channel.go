@@ -45,23 +45,23 @@ type ChannelConfig struct {
 	VertexAIADC       string `json:"vertex_ai_adc,omitempty"`
 }
 
-func GetAllChannels(startIdx int, num int, scope string) ([]*Channel, error) {
+func GetAllChannels(startIdx int, num int, scope string, keyword string) ([]*Channel, int64, error) {
 	var channels []*Channel
 	var err error
-	switch scope {
-	case "all":
-		err = DB.Order("id desc").Find(&channels).Error
-	case "disabled":
-		err = DB.Order("id desc").Where("status = ? or status = ?", ChannelStatusAutoDisabled, ChannelStatusManuallyDisabled).Find(&channels).Error
-	default:
-		err = DB.Order("id desc").Limit(num).Offset(startIdx).Omit("key").Find(&channels).Error
+	var total int64
+	var tx = DB
+	if scope != "all" {
+		tx.Omit("key")
 	}
-	return channels, err
-}
-
-func SearchChannels(keyword string) (channels []*Channel, err error) {
-	err = DB.Omit("key").Where("id = ? or name LIKE ?", helper.String2Int(keyword), keyword+"%").Find(&channels).Error
-	return channels, err
+	if keyword != "" {
+		tx = tx.Where("id = ? or name LIKE ?", helper.String2Int(keyword), keyword+"%")
+	}
+	err = tx.Model(&Channel{}).Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+	err = tx.Order("id desc").Limit(num).Offset(startIdx).Find(&channels).Error
+	return channels, total, err
 }
 
 func GetChannelById(id int, selectAll bool) (*Channel, error) {

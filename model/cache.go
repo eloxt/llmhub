@@ -173,7 +173,7 @@ func InitChannelCache() {
 	var channels []*Channel
 	DB.Where("status = ?", ChannelStatusEnabled).Find(&channels)
 	var models []*Model
-	DB.Order("priority DESC, name ASC").Find(&models)
+	DB.Order("priority DESC, mapped_name ASC").Find(&models)
 
 	id2Channel := make(map[int]*Channel)
 	for _, channel := range channels {
@@ -182,10 +182,10 @@ func InitChannelCache() {
 
 	newModel2channels := make(map[string][]*Channel)
 	for _, model := range models {
-		if _, ok := newModel2channels[model.Name]; !ok {
-			newModel2channels[model.Name] = make([]*Channel, 0)
+		if _, ok := newModel2channels[model.MappedName]; !ok {
+			newModel2channels[model.MappedName] = make([]*Channel, 0)
 		}
-		newModel2channels[model.Name] = append(newModel2channels[model.Name], id2Channel[model.ChannelId])
+		newModel2channels[model.MappedName] = append(newModel2channels[model.MappedName], id2Channel[model.ChannelId])
 	}
 
 	channelSyncLock.Lock()

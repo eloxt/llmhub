@@ -3,9 +3,9 @@
 import { Button } from "@/components/ui/button";
 import { ColumnDef } from "@tanstack/react-table"
 import { Trash2, Pencil, Plus, Minus } from "lucide-react";
-import { Channel } from "./types";
+import { Channel, ChannelType } from "./types";
 import { Switch } from "@/components/ui/switch";
-import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 
 interface ColumnsProps {
     onEdit: (channel: Channel) => void;
@@ -26,6 +26,11 @@ export const createColumns = ({ onEdit, onDelete, handleChannelUpdate }: Columns
     {
         accessorKey: "type",
         header: "Type",
+        cell: ({ row }) => {
+            return (
+                <Badge>{ChannelType[row.original.type]}</Badge>
+            )
+        }
     },
     {
         accessorKey: "status",
@@ -45,11 +50,11 @@ export const createColumns = ({ onEdit, onDelete, handleChannelUpdate }: Columns
         }
     },
     {
-        accessorKey: "usedQuota",
+        accessorKey: "used_quota",
         header: "Used Quota",
         cell: ({ row }) => {
             return (
-                "$" + (row.original.usedQuota ? row.original.usedQuota.toFixed(2) : "0.00")
+                "$" + (row.original.used_quota ? row.original.used_quota.toFixed(2) : "0.00")
             )
         }
     },

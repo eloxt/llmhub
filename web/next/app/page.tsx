@@ -34,6 +34,7 @@ export default function Home() {
                     <TableHeader>
                         <TableRow>
                             <TableHead className="font-semibold">Model</TableHead>
+                            <TableHead className="font-semibold">Channel ID</TableHead>
                             <TableHead className="font-semibold">Input (Per 1M Tokens)</TableHead>
                             <TableHead className="font-semibold">Output (Per 1M Tokens)</TableHead>
                         </TableRow>
@@ -43,6 +44,7 @@ export default function Home() {
                             <TableRow>
                                 <TableCell colSpan={4}>
                                     <div className="space-y-2">
+                                        <Skeleton className="h-4 w-full" />
                                         <Skeleton className="h-4 w-full" />
                                         <Skeleton className="h-4 w-full" />
                                         <Skeleton className="h-4 w-full" />
@@ -56,7 +58,8 @@ export default function Home() {
                         ) : (
                             models.map((model) => (
                                 <TableRow key={model.id} className="h-14">
-                                    <TableCell className="whitespace-normal">{model.name}</TableCell>
+                                    <TableCell className="whitespace-normal">{model.mapped_name}</TableCell>
+                                    <TableCell className="whitespace-normal">{model.channel_id}</TableCell>
                                     <TableCell className="whitespace-normal">${(model.config.prompt * 1000000).toFixed(2)}</TableCell>
                                     <TableCell className="whitespace-normal">${(model.config.completion * 1000000).toFixed(2)}</TableCell>
                                 </TableRow>

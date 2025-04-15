@@ -18,7 +18,6 @@ var MemoryCacheEnabled = strings.ToLower(os.Getenv("MEMORY_CACHE_ENABLED")) == "
 
 var LogConsumeEnabled = true
 var RetryTimes = 0
-var QuotaForNewUser float64 = 0
 var PreConsumedQuota float64 = 0.01
 var ApproximateTokenEnabled = false
 

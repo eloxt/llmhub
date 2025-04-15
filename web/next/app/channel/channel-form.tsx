@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
-import { Channel, Model, ModelConfig } from "./types"
+import { Channel, ChannelType, Model, ModelConfig } from "./types"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { CloudDownload, Plus, Trash2 } from "lucide-react"
@@ -23,28 +23,37 @@ import {
 import { toast } from "sonner"
 import { ModelTable } from "./model-table"
 import { ImportModelTable } from "./import-model-table"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface ChannelFormProps {
     initialData?: Channel
     isEdit?: boolean
 }
 
+/**
+ * A form for creating or updating a channel.
+ *
+ * @param {ChannelFormProps} props The props for the form.
+ * @returns {JSX.Element} The form component.
+ */
+
 export function ChannelForm({ initialData, isEdit = false }: ChannelFormProps) {
     const router = useRouter()
-    
+
     const initialModels = initialData?.models || [];
-    
+
     const [formData, setFormData] = useState<Partial<Channel>>(initialData ? initialData : {
+        id: undefined,
         name: "",
         type: 0,
         key: "",
         status: 1,
-        baseUrl: "",
+        base_url: "",
         priority: 0,
         config: "",
-        systemPrompt: ""
+        system_prompt: ""
     });
-    
+
     const [modelItems, setModelItems] = useState<Model[]>(initialModels);
     const [importDialogOpen, setImportDialogOpen] = useState(false);
     const [availableModels, setAvailableModels] = useState<Model[]>([]);
@@ -61,7 +70,7 @@ export function ChannelForm({ initialData, isEdit = false }: ChannelFormProps) {
                     channel_id: isEdit ? initialData?.id : 0
                 }))
             };
-            
+
             const response = await fetchApi<Channel>('/api/channel', {
                 method: isEdit ? 'PUT' : 'POST',
                 body: dataToSubmit,
@@ -76,7 +85,7 @@ export function ChannelForm({ initialData, isEdit = false }: ChannelFormProps) {
             console.error('Error saving channel:', error)
         }
     }
-    
+
     const addModelItem = () => {
         setModelItems([...modelItems, {
             id: 0,
@@ -97,11 +106,11 @@ export function ChannelForm({ initialData, isEdit = false }: ChannelFormProps) {
             }
         }]);
     };
-    
+
     const removeModelItem = (index: number) => {
         setModelItems(modelItems.filter((_, i) => i !== index));
     };
-    
+
     const updateModelItem = (index: number, field: keyof Model, value: any) => {
         const updatedItems = [...modelItems];
         updatedItems[index] = {
@@ -110,7 +119,7 @@ export function ChannelForm({ initialData, isEdit = false }: ChannelFormProps) {
         };
         setModelItems(updatedItems);
     };
-    
+
     const updateModelConfig = (index: number, field: keyof ModelConfig, value: any) => {
         const updatedItems = [...modelItems];
         updatedItems[index] = {
@@ -144,7 +153,7 @@ export function ChannelForm({ initialData, isEdit = false }: ChannelFormProps) {
         } else if (!isEdit && formData.type && formData.key) {
             setIsLoading(true);
             try {
-                const response = await fetchApi<Model[]>(`/api/channel/fetch-model?channel_type=${formData.type}&key=${formData.key}&base_url=${formData.baseUrl}`);
+                const response = await fetchApi<Model[]>(`/api/channel/fetch-model?channel_type=${formData.type}&key=${formData.key}&base_url=${formData.base_url}&channel_id=${formData.id}`);
                 if (response.success) {
                     setAvailableModels(response.data);
                     setSelectedModels(new Set());
@@ -201,13 +210,28 @@ export function ChannelForm({ initialData, isEdit = false }: ChannelFormProps) {
 
             <div className="space-y-2">
                 <Label htmlFor="type">Type</Label>
-                <Input
-                    id="type"
-                    type="number"
+                <Select
                     value={String(formData.type)}
-                    onChange={(e) => setFormData({ ...formData, type: parseInt(e.target.value) })}
-                    required
-                />
+                    onValueChange={(value) => {
+                        let selectedType = parseInt(value)
+                        if (selectedType === 2) {
+                            setFormData({ ...formData, base_url: "https://openrouter.ai/api", type: selectedType })
+                        } else {
+                            setFormData({ ...formData, base_url: "", type: selectedType })
+                        }
+                    }}
+                >
+                    <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {Object.entries(ChannelType).map(([key, value]) => (
+                            <SelectItem key={key} value={key}>
+                                {value}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
 
             <div className="space-y-2">
@@ -242,7 +266,7 @@ export function ChannelForm({ initialData, isEdit = false }: ChannelFormProps) {
                         </Button>
                     </div>
                 </div>
-                <ModelTable 
+                <ModelTable
                     models={modelItems}
                     onUpdate={updateModelItem}
                     onUpdateConfig={updateModelConfig}
@@ -254,8 +278,8 @@ export function ChannelForm({ initialData, isEdit = false }: ChannelFormProps) {
                 <Label htmlFor="baseUrl">Base URL</Label>
                 <Input
                     id="baseUrl"
-                    value={formData.baseUrl}
-                    onChange={(e) => setFormData({ ...formData, baseUrl: e.target.value })}
+                    value={formData.base_url}
+                    onChange={(e) => setFormData({ ...formData, base_url: e.target.value })}
                 />
             </div>
 
@@ -274,8 +298,8 @@ export function ChannelForm({ initialData, isEdit = false }: ChannelFormProps) {
                 <Label htmlFor="systemPrompt">System Prompt</Label>
                 <Textarea
                     id="systemPrompt"
-                    value={formData.systemPrompt}
-                    onChange={(e) => setFormData({ ...formData, systemPrompt: e.target.value })}
+                    value={formData.system_prompt}
+                    onChange={(e) => setFormData({ ...formData, system_prompt: e.target.value })}
                 />
             </div>
 
@@ -310,7 +334,7 @@ export function ChannelForm({ initialData, isEdit = false }: ChannelFormProps) {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <div className="max-h-[60vh] overflow-y-auto w-full">
-                        <ImportModelTable 
+                        <ImportModelTable
                             models={availableModels}
                             selectedModels={selectedModels}
                             onSelect={toggleModelSelection}

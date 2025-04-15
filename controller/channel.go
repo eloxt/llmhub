@@ -15,17 +15,18 @@ import (
 
 func GetAllChannels(c *gin.Context) {
 	p, _ := strconv.Atoi(c.Query("p"))
+	pageSize, _ := strconv.Atoi(c.Query("page_size"))
 	if p < 0 {
 		p = 0
+	}
+	if pageSize == 0 {
+		pageSize = 10
 	}
 	keyword := c.Query("keyword")
 	var channels []*model.Channel
 	var err error
-	if len(keyword) > 0 {
-		channels, err = model.SearchChannels(keyword)
-	} else {
-		channels, err = model.GetAllChannels(p*config.ItemsPerPage, config.ItemsPerPage, "limited")
-	}
+	var total int64
+	channels, total, err = model.GetAllChannels(p*config.ItemsPerPage, config.ItemsPerPage, "limited", keyword)
 	if err != nil {
 		result.ReturnError(c, err)
 		return
@@ -39,7 +40,7 @@ func GetAllChannels(c *gin.Context) {
 		}
 		channels[i].Models = models
 	}
-	result.ReturnData(c, channels)
+	result.ReturnPage(c, p, total, channels)
 	return
 }
 
@@ -137,6 +138,7 @@ func FetchChannelModelList(c *gin.Context) {
 		}
 		channelType = channel.Type
 		key = channel.Key
+		baseUrl = *channel.BaseURL
 	} else {
 		channelType_, err := strconv.Atoi(c.Query("channel_type"))
 		if err != nil {

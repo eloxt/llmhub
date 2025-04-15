@@ -116,7 +116,7 @@ func GetModelNameList() ([]string, error) {
 	if common.UsingPostgreSQL {
 		trueVal = "true"
 	}
-	err := DB.Model(&Model{}).Distinct("name").Where("enabled = "+trueVal).Pluck("model", &models).Error
+	err := DB.Model(&Model{}).Distinct("mapped_name").Where("enabled = "+trueVal).Pluck("model", &models).Error
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +164,7 @@ func GetModelByChannel(channelId int) ([]*Model, error) {
 
 func GetModelDetailList() ([]*Model, error) {
 	var models []*Model
-	err := DB.Find(&models).Error
+	err := DB.Order("mapped_name, channel_id").Where("enabled = true").Find(&models).Error
 	if err != nil {
 		return nil, err
 	}

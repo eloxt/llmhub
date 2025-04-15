@@ -1,16 +1,16 @@
 export interface Channel {
-    id: string;
+    id: number | undefined;
     type: number;
     key: string;
     status: number;
     name: string;
     created_time: string;
-    testTime: string;
-    baseUrl: string;
-    usedQuota: number;
+    test_time: string;
+    base_url: string;
+    used_quota: number;
     priority: number;
     config: string;
-    systemPrompt: string;
+    system_prompt: string;
     models: Model[];
 }
 
@@ -33,4 +33,17 @@ export interface ModelConfig {
     reasoning: number;
     additional: number;
     tokenizer: string;
+}
+
+export const ChannelType: { [key: number]: string } = {
+    1: "OpenAI",
+    2: "OpenRouter",
+    3: "OpenAI Compatible",
+    4: "Azure",
+    5: "Anthropic",
+    6: "Gemini",
+    7: "Ollama",
+    8: "DeepSeek",
+    9: "Cloudflare",
+    10: "xAI"
 }

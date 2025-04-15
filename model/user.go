@@ -27,17 +27,16 @@ const (
 )
 
 type User struct {
-	Id           int     `json:"id"`
-	Username     string  `json:"username" gorm:"unique;index" validate:"max=12"`
-	Password     string  `json:"password" gorm:"not null;" validate:"min=8,max=20"`
-	DisplayName  string  `json:"display_name" gorm:"index" validate:"max=20"`
-	Role         int     `json:"role" gorm:"type:int;default:1"`
-	Status       int     `json:"status" gorm:"type:int;default:1"`
-	Email        string  `json:"email" gorm:"index" validate:"max=50"`
-	AccessToken  string  `json:"access_token" gorm:"type:char(32);column:access_token;uniqueIndex"`
-	Quota        float64 `json:"quota" gorm:"default:0"`
-	UsedQuota    int64   `json:"used_quota" gorm:"bigint;default:0;column:used_quota"`
-	RequestCount int     `json:"request_count" gorm:"type:int;default:0;"`
+	Id           int    `json:"id"`
+	Username     string `json:"username" gorm:"unique;index" validate:"max=12"`
+	Password     string `json:"password" gorm:"not null;" validate:"min=8,max=20"`
+	DisplayName  string `json:"display_name" gorm:"index" validate:"max=20"`
+	Role         int    `json:"role" gorm:"type:int;default:1"`
+	Status       int    `json:"status" gorm:"type:int;default:1"`
+	Email        string `json:"email" gorm:"index" validate:"max=50"`
+	AccessToken  string `json:"access_token" gorm:"type:char(32);column:access_token;uniqueIndex"`
+	UsedQuota    int64  `json:"used_quota" gorm:"bigint;default:0;column:used_quota"`
+	RequestCount int    `json:"request_count" gorm:"type:int;default:0;"`
 }
 
 func GetMaxUserId() int {
@@ -112,7 +111,6 @@ func (user *User) Insert(ctx context.Context, inviterId int) error {
 			return err
 		}
 	}
-	user.Quota = config.QuotaForNewUser
 	user.AccessToken = random.GetUUID()
 	result := DB.Create(user)
 	if result.Error != nil {
@@ -282,38 +280,6 @@ func GetUserGroup(id int) (group string, err error) {
 
 	err = DB.Model(&User{}).Where("id = ?", id).Select(groupCol).Find(&group).Error
 	return group, err
-}
-
-func IncreaseUserQuota(id int, quota float64) (err error) {
-	if quota < 0 {
-		return errors.New("quota 不能为负数！")
-	}
-	if config.BatchUpdateEnabled {
-		addNewRecord(BatchUpdateTypeUserQuota, id, quota)
-		return nil
-	}
-	return increaseUserQuota(id, quota)
-}
-
-func increaseUserQuota(id int, quota float64) (err error) {
-	err = DB.Model(&User{}).Where("id = ?", id).Update("quota", gorm.Expr("quota + ?", quota)).Error
-	return err
-}
-
-func DecreaseUserQuota(id int, quota float64) (err error) {
-	if quota < 0 {
-		return errors.New("quota 不能为负数！")
-	}
-	if config.BatchUpdateEnabled {
-		addNewRecord(BatchUpdateTypeUserQuota, id, -quota)
-		return nil
-	}
-	return decreaseUserQuota(id, quota)
-}
-
-func decreaseUserQuota(id int, quota float64) (err error) {
-	err = DB.Model(&User{}).Where("id = ?", id).Update("quota", gorm.Expr("quota - ?", quota)).Error
-	return err
 }
 
 func GetRootUserEmail() (email string) {

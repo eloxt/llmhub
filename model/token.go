@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/eloxt/llmhub/common"
 	"github.com/eloxt/llmhub/common/config"
-	"github.com/eloxt/llmhub/common/helper"
 	"github.com/eloxt/llmhub/common/logger"
 	"time"
 
@@ -33,22 +32,21 @@ type Token struct {
 	UsedQuota      float64    `json:"used_quota" gorm:"default:0"`
 }
 
-func GetAllUserTokens(userId int, startIdx int, num int, order string) ([]*Token, error) {
+func GetAllUserTokens(userId int, startIdx int, num int, keyword string) ([]*Token, int64, error) {
 	var tokens []*Token
 	var err error
+	var total int64
 	query := DB.Where("user_id = ?", userId)
-
-	switch order {
-	case "remain_quota":
-		query = query.Order("unlimited_quota desc, remain_quota desc")
-	case "used_quota":
-		query = query.Order("used_quota desc")
-	default:
-		query = query.Order("id desc")
+	if keyword != "" {
+		query = query.Where("name LIKE ?", keyword+"%")
 	}
 
+	err = query.Model(&Token{}).Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
 	err = query.Limit(num).Offset(startIdx).Find(&tokens).Error
-	return tokens, err
+	return tokens, total, err
 }
 
 func SearchUserTokens(userId int, keyword string) (tokens []*Token, err error) {
@@ -173,7 +171,7 @@ func increaseTokenQuota(id int, quota float64) (err error) {
 		map[string]interface{}{
 			"remain_quota":  gorm.Expr("remain_quota + ?", quota),
 			"used_quota":    gorm.Expr("used_quota - ?", quota),
-			"accessed_time": helper.GetTimestamp(),
+			"accessed_time": time.Now(),
 		},
 	).Error
 	return err
@@ -195,96 +193,20 @@ func decreaseTokenQuota(id int, quota float64) (err error) {
 		map[string]interface{}{
 			"remain_quota":  gorm.Expr("remain_quota - ?", quota),
 			"used_quota":    gorm.Expr("used_quota + ?", quota),
-			"accessed_time": helper.GetTimestamp(),
+			"accessed_time": time.Now(),
 		},
 	).Error
 	return err
 }
 
-func PreConsumeTokenQuota(tokenId int, quota float64) (err error) {
-	if quota < 0 {
-		return errors.New("quota 不能为负数！")
-	}
-	token, err := GetTokenById(tokenId)
-	if err != nil {
-		return err
-	}
-	if !token.UnlimitedQuota && token.RemainQuota < quota {
-		return errors.New("令牌额度不足")
-	}
-	userQuota, err := GetUserQuota(token.UserId)
-	if err != nil {
-		return err
-	}
-	if userQuota < quota {
-		return errors.New("用户额度不足")
-	}
-	//quotaTooLow := userQuota >= config.QuotaRemindThreshold && userQuota-quota < config.QuotaRemindThreshold
-	//noMoreQuota := userQuota-quota <= 0
-	//if quotaTooLow || noMoreQuota {
-	//	go func() {
-	//		email, err := GetUserEmail(token.UserId)
-	//		if err != nil {
-	//			logger.SysError("failed to fetch user email: " + err.Error())
-	//		}
-	//		prompt := "额度提醒"
-	//		var contentText string
-	//		if noMoreQuota {
-	//			contentText = "您的额度已用尽"
-	//		} else {
-	//			contentText = "您的额度即将用尽"
-	//		}
-	//		if email != "" {
-	//			topUpLink := fmt.Sprintf("%s/topup", config.ServerAddress)
-	//			content := message.EmailTemplate(
-	//				prompt,
-	//				fmt.Sprintf(`
-	//					<p>您好！</p>
-	//					<p>%s，当前剩余额度为 <strong>%d</strong>。</p>
-	//					<p>为了不影响您的使用，请及时充值。</p>
-	//					<p style="text-align: center; margin: 30px 0;">
-	//						<a href="%s" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">立即充值</a>
-	//					</p>
-	//					<p style="color: #666;">如果按钮无法点击，请复制以下链接到浏览器中打开：</p>
-	//					<p style="background-color: #f8f8f8; padding: 10px; border-radius: 4px; word-break: break-all;">%s</p>
-	//				`, contentText, userQuota, topUpLink, topUpLink),
-	//			)
-	//			err = message.SendEmail(prompt, email, content)
-	//			if err != nil {
-	//				logger.SysError("failed to send email: " + err.Error())
-	//			}
-	//		}
-	//	}()
-	//}
-	if !token.UnlimitedQuota {
-		err = DecreaseTokenQuota(tokenId, quota)
-		if err != nil {
-			return err
-		}
-	}
-	err = DecreaseUserQuota(token.UserId, quota)
-	return err
-}
-
 func PostConsumeTokenQuota(tokenId int, quota float64) (err error) {
-	token, err := GetTokenById(tokenId)
+	if quota > 0 {
+		err = DecreaseTokenQuota(tokenId, quota)
+	} else {
+		err = IncreaseTokenQuota(tokenId, -quota)
+	}
 	if err != nil {
 		return err
-	}
-	if quota > 0 {
-		err = DecreaseUserQuota(token.UserId, quota)
-	} else {
-		err = IncreaseUserQuota(token.UserId, -quota)
-	}
-	if !token.UnlimitedQuota {
-		if quota > 0 {
-			err = DecreaseTokenQuota(tokenId, quota)
-		} else {
-			err = IncreaseTokenQuota(tokenId, -quota)
-		}
-		if err != nil {
-			return err
-		}
 	}
 	return nil
 }
