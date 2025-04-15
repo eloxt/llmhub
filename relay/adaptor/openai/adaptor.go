@@ -16,6 +16,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 type Adaptor struct {
@@ -124,10 +125,14 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Met
 	return
 }
 
-func (a *Adaptor) FetchModelList(key string) ([]*model.Model, error) {
-	baseURL := channeltype.ChannelBaseURLs[a.ChannelType]
-	requestURL := fmt.Sprintf("%s/v1/models", baseURL)
+func (a *Adaptor) FetchModelList(baseUrl string, key string) ([]*model.Model, error) {
+	if baseUrl == "" {
+		baseUrl = channeltype.ChannelBaseURLs[a.ChannelType]
+	}
+	baseUrl = strings.TrimSuffix(baseUrl, "/")
+	requestURL := fmt.Sprintf("%s/v1/models", baseUrl)
 	req, err := http.NewRequest(http.MethodGet, requestURL, nil)
+	req.Header.Set("Authorization", key)
 	if err != nil {
 		logger.Warnf(nil, "fetch model list for OpenAI failed: %s", err.Error())
 		return nil, err

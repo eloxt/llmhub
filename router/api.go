@@ -21,7 +21,7 @@ func SetApiRouter(router *gin.Engine) {
 			userRoute.GET("/logout", controller.Logout)
 		}
 		channelRoute := apiRouter.Group("/channel")
-		//channelRoute.Use(middleware.UserAuth())
+		channelRoute.Use(middleware.UserAuth())
 		{
 			channelRoute.GET("/", controller.GetAllChannels)
 			channelRoute.GET("", controller.GetAllChannels)
@@ -39,7 +39,7 @@ func SetApiRouter(router *gin.Engine) {
 			channelRoute.GET("/fetch-model", controller.FetchChannelModelList)
 		}
 		tokenRoute := apiRouter.Group("/token")
-		//tokenRoute.Use(middleware.UserAuth())
+		tokenRoute.Use(middleware.UserAuth())
 		{
 			tokenRoute.GET("/", controller.GetAllTokens)
 			tokenRoute.GET("", controller.GetAllTokens)
@@ -51,7 +51,7 @@ func SetApiRouter(router *gin.Engine) {
 			tokenRoute.DELETE("/:id", controller.DeleteToken)
 		}
 		logRoute := apiRouter.Group("/log")
-		//logRoute.Use(middleware.UserAuth())
+		logRoute.Use(middleware.UserAuth())
 		{
 			logRoute.GET("/", controller.GetAllLogs)
 			logRoute.GET("", controller.GetAllLogs)

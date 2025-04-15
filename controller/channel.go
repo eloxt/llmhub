@@ -121,6 +121,7 @@ func UpdateChannel(c *gin.Context) {
 
 func FetchChannelModelList(c *gin.Context) {
 	channelId := c.Query("channel_id")
+	baseUrl := c.Query("base_url")
 	var channelType int
 	var key string
 	if channelId != "" {
@@ -155,7 +156,7 @@ func FetchChannelModelList(c *gin.Context) {
 		return
 	}
 	adaptorInstance.Init(metaInstance)
-	list, err := adaptorInstance.FetchModelList(key)
+	list, err := adaptorInstance.FetchModelList(baseUrl, key)
 	if err != nil {
 		return
 	}

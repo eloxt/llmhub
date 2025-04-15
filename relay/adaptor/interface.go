@@ -17,6 +17,6 @@ type Adaptor interface {
 	//ConvertImageRequest(request *model.ImageRequest) (any, error)
 	DoRequest(c *gin.Context, meta *meta.Meta, requestBody io.Reader) (*http.Response, error)
 	DoResponse(c *gin.Context, resp *http.Response, meta *meta.Meta) (usage *relayModel.Usage, err *relayModel.ErrorWithStatusCode)
-	FetchModelList(key string) ([]*model.Model, error)
+	FetchModelList(baseUrl string, key string) ([]*model.Model, error)
 	GetChannelName() string
 }

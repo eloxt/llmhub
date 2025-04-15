@@ -4,10 +4,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Trash2 } from "lucide-react"
 import { Model, ModelConfig } from "./types"
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable, Row, Table as ReactTable, ColumnResizeMode } from "@tanstack/react-table"
+import { ImportModelTable } from "./import-model-table"
 
 export interface ModelTableProps {
     isImportView?: boolean;
@@ -28,29 +28,26 @@ export function ModelTable({
     onUpdateConfig, 
     onRemove 
 }: ModelTableProps) {
+    // If we're in import view, render the ImportModelTable component
+    if (isImportView) {
+        return (
+            <ImportModelTable 
+                models={models}
+                selectedModels={selectedModels}
+                onSelect={onSelect!}
+            />
+        );
+    }
+
+    // Regular edit view columns
     const columns: ColumnDef<Model>[] = [
-        ...(isImportView ? [
-            {
-                id: 'select',
-                cell: ({ row }: { row: Row<Model> }) => (
-                    <Checkbox
-                        checked={selectedModels.has(row.original.id)}
-                        onCheckedChange={() => onSelect?.(row.original.id)}
-                    />
-                ),
-                size: 50,
-                enableResizing: true,
-            },
-        ] : []),
         {
             accessorKey: 'name',
             header: 'Name',
             enableResizing: true,
             cell: ({ row, table }: { row: Row<Model>, table: ReactTable<Model> }) => {
                 const index = table.getRowModel().rows.findIndex((r: Row<Model>) => r.id === row.id);
-                return isImportView ? (
-                    row.original.name
-                ) : (
+                return (
                     <Input 
                         value={row.original.name}
                         onChange={(e) => onUpdate?.(index, "name", e.target.value)}
@@ -59,7 +56,7 @@ export function ModelTable({
                 );
             },
         },
-        ...(!isImportView ? [{
+        {
             accessorKey: 'mapped_name',
             header: 'Mapped Name',
             enableResizing: true,
@@ -73,33 +70,29 @@ export function ModelTable({
                     />
                 );
             },
-        }] : []),
-        ...(!isImportView ? [
-            {
-                id: 'enabled',
-                header: 'Enable',
-                enableResizing: true,
-                cell: ({ row, table }: { row: Row<Model>, table: ReactTable<Model> }) => {
-                    const index = table.getRowModel().rows.findIndex((r: Row<Model>) => r.id === row.id);
-                    return (
-                        <Switch
-                            checked={row.original.enabled}
-                            onCheckedChange={(checked) => onUpdate?.(index, "enabled", checked)}
-                        />
-                    );
-                },
-                size: 52,
-            },
-        ] : []),
+        },
         {
-            id: isImportView ? 'context_length' : 'prompt',
-            header: isImportView ? 'Context Length' : 'Prompt',
+            id: 'enabled',
+            header: 'Enable',
             enableResizing: true,
             cell: ({ row, table }: { row: Row<Model>, table: ReactTable<Model> }) => {
                 const index = table.getRowModel().rows.findIndex((r: Row<Model>) => r.id === row.id);
-                return isImportView ? (
-                    row.original.config.context_length
-                ) : (
+                return (
+                    <Switch
+                        checked={row.original.enabled}
+                        onCheckedChange={(checked) => onUpdate?.(index, "enabled", checked)}
+                    />
+                );
+            },
+            size: 52,
+        },
+        {
+            id: 'prompt',
+            header: 'Prompt',
+            enableResizing: true,
+            cell: ({ row, table }: { row: Row<Model>, table: ReactTable<Model> }) => {
+                const index = table.getRowModel().rows.findIndex((r: Row<Model>) => r.id === row.id);
+                return (
                     <Input 
                         type="number"
                         value={(row.original.config.prompt * 1000000).toFixed(2)}
@@ -110,14 +103,12 @@ export function ModelTable({
             },
         },
         {
-            id: isImportView ? 'prompt_cost' : 'input_cache_read',
-            header: isImportView ? 'Prompt Cost' : 'Input Cache Read',
+            id: 'input_cache_read',
+            header: 'Input Cache Read',
             enableResizing: true,
             cell: ({ row, table }: { row: Row<Model>, table: ReactTable<Model> }) => {
                 const index = table.getRowModel().rows.findIndex((r: Row<Model>) => r.id === row.id);
-                return isImportView ? (
-                    "$" + (row.original.config.prompt * 1000000).toFixed(2)
-                ) : (
+                return (
                     <Input 
                         type="number"
                         value={(row.original.config.input_cache_read * 1000000).toFixed(2)}
@@ -133,9 +124,7 @@ export function ModelTable({
             enableResizing: true,
             cell: ({ row, table }: { row: Row<Model>, table: ReactTable<Model> }) => {
                 const index = table.getRowModel().rows.findIndex((r: Row<Model>) => r.id === row.id);
-                return isImportView ? (
-                    "$" + (row.original.config.completion * 1000000).toFixed(2)
-                ) : (
+                return (
                     <Input 
                         type="number"
                         value={(row.original.config.completion * 1000000).toFixed(2)}
@@ -145,25 +134,23 @@ export function ModelTable({
                 );
             },
         },
-        ...(!isImportView ? [
-            {
-                id: 'actions',
-                cell: ({ row, table }: { row: Row<Model>, table: ReactTable<Model> }) => {
-                    const index = table.getRowModel().rows.findIndex((r: Row<Model>) => r.id === row.id);
-                    return (
-                        <Button 
-                            type="button" 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => onRemove?.(index)}
-                        >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                    );
-                },
-                size: 52,
+        {
+            id: 'actions',
+            cell: ({ row, table }: { row: Row<Model>, table: ReactTable<Model> }) => {
+                const index = table.getRowModel().rows.findIndex((r: Row<Model>) => r.id === row.id);
+                return (
+                    <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => onRemove?.(index)}
+                    >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                );
             },
-        ] : []),
+            size: 52,
+        },
     ];
 
     const table = useReactTable({
@@ -221,9 +208,7 @@ export function ModelTable({
                     ) : (
                         <TableRow>
                             <TableCell colSpan={columns.length} className="text-center text-muted-foreground py-6">
-                                {isImportView 
-                                    ? "No models available to import." 
-                                    : "No models added. Click \"Add Model\" to add one."}
+                                No models added. Click "Add Model" to add one.
                             </TableCell>
                         </TableRow>
                     )}

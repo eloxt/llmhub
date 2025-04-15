@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import { ModelTable } from "./model-table"
+import { ImportModelTable } from "./import-model-table"
 
 interface ChannelFormProps {
     initialData?: Channel
@@ -36,6 +37,7 @@ export function ChannelForm({ initialData, isEdit = false }: ChannelFormProps) {
     const [formData, setFormData] = useState<Partial<Channel>>(initialData ? initialData : {
         name: "",
         type: 0,
+        key: "",
         status: 1,
         baseUrl: "",
         priority: 0,
@@ -142,7 +144,7 @@ export function ChannelForm({ initialData, isEdit = false }: ChannelFormProps) {
         } else if (!isEdit && formData.type && formData.key) {
             setIsLoading(true);
             try {
-                const response = await fetchApi<Model[]>(`/api/channel/fetch-model?channel_type=${formData.type}&key=${formData.key}`);
+                const response = await fetchApi<Model[]>(`/api/channel/fetch-model?channel_type=${formData.type}&key=${formData.key}&base_url=${formData.baseUrl}`);
                 if (response.success) {
                     setAvailableModels(response.data);
                     setSelectedModels(new Set());
@@ -308,8 +310,7 @@ export function ChannelForm({ initialData, isEdit = false }: ChannelFormProps) {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <div className="max-h-[60vh] overflow-y-auto w-full">
-                        <ModelTable 
-                            isImportView={true}
+                        <ImportModelTable 
                             models={availableModels}
                             selectedModels={selectedModels}
                             onSelect={toggleModelSelection}
